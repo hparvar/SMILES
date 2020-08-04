@@ -5,40 +5,25 @@ Created on Thu Jul 30 17:37:48 2020
 @author: h_par
 """
 
-import pandas as pd
-import numpy as np
-
-from sklearn.model_selection import train_test_split
-
-
-import tensorflow as tf
 from tensorflow import keras
 
-from feature_extractor import fingerprint_features
-from utils import ExplicitBitVect_to_NumpyArray, show_results, plot_training_results
+from utils import show_results, plot_training_results, load_data, extract_features, split_data
+
+# parameters --------------------------------------------
+targets=['P1'] 
+file_name = 'dataset_single.csv'
+lr = 0.00001
+optimizer = keras.optimizers.Adam(lr=lr)
+loss = "sparse_categorical_crossentropy"
+batch_size = 32
+epochs = 5
+model_name = 'test_1' # ToDo: Check if the model exist
+# -------------------------------------------------------
 
 
-def load_data_single(filename):
-    # ToDo: Modify the function for both methods 
-    df = pd.read_csv(filename)
-    
-    features = []
-    for i in range(len(df)):
-        extracted_example = fingerprint_features(df['smiles'].iloc[i])
-        features.append(ExplicitBitVect_to_NumpyArray(extracted_example))
-    df['features']=features
-    
-    X, X_test, y, y_test = train_test_split(df['features'], df['P1'], test_size=0.1, random_state=11)
-    X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.1, random_state=11)
-    
-    return np.vstack(X_train) , np.vstack(X_val) , np.vstack(X_test) , np.vstack(y_train) , np.vstack(y_val) , np.vstack(y_test)
-
-
-model_name = 'first_run_10k_dropout' 
-# ToDo: Check if the model exist
-
-# Load and split data
-X_train, X_val, X_test, y_train, y_val, y_test =  load_data_single('dataset_single.csv')
+smiles, target = load_data(file_name, targets=targets)
+features = extract_features(smiles)
+X_train, X_val, X_test, y_train, y_val, y_test = split_data(features, target.values)
 
 
 # Designing network
@@ -56,12 +41,12 @@ model.add(keras.layers.Dense(2, activation='softmax'))
 model.summary()
 
 #Compiling the model
-model.compile(optimizer=keras.optimizers.Adam(lr=0.000001), loss="sparse_categorical_crossentropy", metrics=['accuracy'])
+model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy'])
 
 #Training the model
 lr_reduce = keras.callbacks.ReduceLROnPlateau(min_lr=0.00000001)
 mcp_save = keras.callbacks.ModelCheckpoint('model/' + model_name + '.h5', save_best_only=True, monitor='val_loss', mode='min')
-history = model.fit(X_train, y_train, batch_size=32, epochs=10000, validation_data=(X_val, y_val), callbacks=[mcp_save, lr_reduce], shuffle=True)
+history = model.fit(X_train, y_train, batch_size=batch_size, epochs=epochs, validation_data=(X_val, y_val), callbacks=[mcp_save, lr_reduce], shuffle=True)
 
 plot_training_results(history, 'model/' + model_name)
 
@@ -85,7 +70,7 @@ print("Loaded model from disk")
 
 # evaluate loaded model on test data
 
-loaded_model.compile(loss='sparse_categorical_crossentropy', optimizer=keras.optimizers.Adam(lr=0.0001), metrics=['accuracy'])
+loaded_model.compile(loss=loss, optimizer=optimizer, metrics=['accuracy'])
 score = loaded_model.evaluate(X_train, y_train, verbose=0)
 print("Training %s: %.2f%%" % (loaded_model.metrics_names[1], score[1] * 100))
 score = loaded_model.evaluate(X_val, y_val, verbose=0)
