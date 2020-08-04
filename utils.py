@@ -160,21 +160,64 @@ def show_results(model, modelname, data, label, title):
     else:
         y_actual = label.argmax(axis=1)
 
-
-    actualdf = pd.DataFrame({'actualvalues': y_actual})
-    preddf = pd.DataFrame({'predictedvalues': y_pred})
-    finaldf = actualdf.join(preddf)
-
-    finaldf.groupby('actualvalues').count()
-    finaldf.groupby('predictedvalues').count()
-
     report = pd.DataFrame(
         classification_report(y_actual, y_pred, output_dict=True)).T
     report.to_csv(
         'model/' + modelname + '_' + title + '_classification_report.csv')
-    print('\nTest Stats\n', classification_report(y_actual, y_pred))
+    print('\n' + title + 'Stats\n', classification_report(y_actual, y_pred))
     print_confusion_matrix(confusion_matrix(y_actual, y_pred),
                            unique_labels(y_actual, y_pred), title, modelname)
     
 
 
+def plot_training_results_multitask(history, model_name_path, targets):
+    # Plotting the Train Valid Loss Graph
+    plt.plot(history.history['loss'])
+    plt.plot(history.history['val_loss'])
+    plt.title('model loss')
+    plt.ylabel('loss')
+    plt.xlabel('epoch')
+    plt.legend(['train', 'validation'], loc='upper left')
+    plt.savefig(model_name_path + '_loss.png')
+    plt.show()
+    
+    for i in targets:
+        # Plotting the Train Valid Loss Graph
+        plt.plot(history.history[i + '_loss'])
+        plt.plot(history.history['val_' + i + '_loss'])
+        plt.title('model loss for ' + i)
+        plt.ylabel('loss')
+        plt.xlabel('epoch')
+        plt.legend(['train', 'validation'], loc='upper left')
+        plt.savefig(model_name_path + '_' + i + '_loss.png')
+        plt.show()
+
+        # Plotting the Train Valid Accuracy Graph
+        
+        plt.plot(history.history[i + '_accuracy'])
+        plt.plot(history.history['val_' + i + '_accuracy'])
+        plt.title('model accuracy for ' + i)
+        plt.ylabel('accuracy')
+        plt.xlabel('epoch')
+        plt.legend(['train', 'validation'], loc='upper left')
+        plt.savefig(model_name_path + '_' + i + '_accuracy.png')
+        plt.show()
+
+
+
+def show_results_multitask(model, modelname, data, label, title, targets):
+    preds = model.predict(data, batch_size=1, verbose=1)
+    # y_pred = preds.argmax(axis=1)
+    y_pred = []
+    y_actual = []
+    for i in range(len(preds)):
+        y_pred.append(preds[i].argmax(axis=1))
+        y_actual.append(label[i].values)
+   
+    for i in range(len(targets)):
+        report = pd.DataFrame(
+            classification_report(y_actual[i], y_pred[i], output_dict=True)).T
+        report.to_csv('model/' + modelname + '_' + title + '_' + targets[i] + '_classification_report.csv')
+        print('\n' + title + '_' + targets[i] + 'Stats\n', classification_report(y_actual[i], y_pred[i]))
+        print_confusion_matrix(confusion_matrix(y_actual[i], y_pred[i]),
+                                unique_labels(y_actual[i], y_pred[i]), title + '_' + targets[i], modelname)
