@@ -12,23 +12,91 @@ import seaborn as sns
 from sklearn.metrics import confusion_matrix, classification_report
 from sklearn.utils.multiclass import unique_labels
 from sklearn.model_selection import train_test_split
-
 from feature_extractor import fingerprint_features
 from rdkit.Chem import AllChem
 from rdkit import Chem
+
+
 def load_data(filename, targets='P1'):
+    """
+    
+
+    Parameters
+    ----------
+    filename : TYPE
+        DESCRIPTION.
+    targets : TYPE, optional
+        DESCRIPTION. The default is 'P1'.
+
+    Returns
+    -------
+    TYPE
+        DESCRIPTION.
+    TYPE
+        DESCRIPTION.
+
+    """
     df = pd.read_csv(filename)
     return df.smiles, df[targets]
 
+
 def split_data(features, target, val_size=0.1, test_size=0.1, random_state=42):
+    """
+    
+
+    Parameters
+    ----------
+    features : TYPE
+        DESCRIPTION.
+    target : TYPE
+        DESCRIPTION.
+    val_size : TYPE, optional
+        DESCRIPTION. The default is 0.1.
+    test_size : TYPE, optional
+        DESCRIPTION. The default is 0.1.
+    random_state : TYPE, optional
+        DESCRIPTION. The default is 42.
+
+    Returns
+    -------
+    X_train : TYPE
+        DESCRIPTION.
+    X_val : TYPE
+        DESCRIPTION.
+    X_test : TYPE
+        DESCRIPTION.
+    y_train : TYPE
+        DESCRIPTION.
+    y_val : TYPE
+        DESCRIPTION.
+    y_test : TYPE
+        DESCRIPTION.
+
+    """
     X, X_test, y, y_test = train_test_split(features, target, test_size=test_size, random_state=random_state)
     X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=val_size, random_state=random_state)
     return X_train, X_val, X_test, y_train, y_val, y_test
 
+
 def ExplicitBitVect_to_NumpyArray(bitvector):
+    """
+    
+
+    Parameters
+    ----------
+    bitvector : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    TYPE
+        DESCRIPTION.
+
+    """
     bitstring = bitvector.ToBitString()
     intmap = map(int, bitstring)
     return np.array(list(intmap))
+
 
 def mol2alt_sentence(mol, radius=2):
     """Calculates ECFP (Morgan fingerprint) and returns only the alternating sentence
@@ -71,7 +139,22 @@ def mol2alt_sentence(mol, radius=2):
 
     return list(alternating_sentence)
 
+
 def extract_features(smiles):
+    """
+    
+
+    Parameters
+    ----------
+    smiles : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    TYPE
+        DESCRIPTION.
+
+    """
     features = []
     for i in range(len(smiles)):
         extracted_example = fingerprint_features(smiles.iloc[i])
@@ -79,7 +162,48 @@ def extract_features(smiles):
     # return features
     return np.vstack(features)
 
+def extract_molecul_features(smile):
+    """
+    
+
+    Parameters
+    ----------
+    smile : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    TYPE
+        DESCRIPTION.
+
+    """
+    features = ExplicitBitVect_to_NumpyArray(fingerprint_features(smile))
+    return np.expand_dims(features, axis=0)
+
+
 def map_moleculs(smiles):
+    """
+    
+
+    Parameters
+    ----------
+    smiles : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    mol_map : TYPE
+        DESCRIPTION.
+    word_map : TYPE
+        DESCRIPTION.
+    max_seq_len : TYPE
+        DESCRIPTION.
+    vocab : TYPE
+        DESCRIPTION.
+    num_words : TYPE
+        DESCRIPTION.
+
+    """
     mols = [Chem.MolFromSmiles(s) for s in smiles]
     mol_sentences = [mol2alt_sentence(x) for x in mols]
     vocab = np.unique([x for l in mol_sentences for x in l])  # array of unique substructures (Morgan identifiers)
@@ -98,7 +222,48 @@ def map_moleculs(smiles):
     
     return mol_map, word_map, max_seq_len, vocab, num_words
 
+
+def map_single_molecul(smile, word_map):
+    """
+    
+
+    Parameters
+    ----------
+    smile : TYPE
+        DESCRIPTION.
+    word_map : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    TYPE
+        DESCRIPTION.
+
+    """
+    mol = Chem.MolFromSmiles(smile)
+    mol_sentence = mol2alt_sentence(mol)
+    mol_map = [word_map[s] for s in mol_sentence]
+    mol_map = np.array(mol_map, dtype=object)
+      
+    return np.expand_dims(mol_map, axis=0)
+
+
 def plot_training_results(history, model_name_path):
+    """
+    
+
+    Parameters
+    ----------
+    history : TYPE
+        DESCRIPTION.
+    model_name_path : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    None.
+
+    """
     # Plotting the Train Valid Loss Graph
     
     plt.plot(history.history['loss'])
@@ -108,7 +273,6 @@ def plot_training_results(history, model_name_path):
     plt.xlabel('epoch')
     plt.legend(['train', 'validation'], loc='upper left')
     plt.savefig(model_name_path + '_loss.png')
-    plt.show()
     
     # Plotting the Train Valid Accuracy Graph
     
@@ -119,15 +283,40 @@ def plot_training_results(history, model_name_path):
     plt.xlabel('epoch')
     plt.legend(['train', 'validation'], loc='upper left')
     plt.savefig(model_name_path + '_accuracy.png')
-    plt.show()
+
+    return
 
 
-
-def print_confusion_matrix(confusion_matrix, class_names, title, modelname,
-                           figsize=(10, 7),
-                           fontsize=14):
+def print_confusion_matrix(confusion_matrix, class_names, title, modelname, figsize=(10, 7), fontsize=14):
     """Prints a confusion matrix, as returned by sklearn.metrics.confusion_matrix, as a seaborn heatmap.
-    Saves confusion matrix file to jpg file."""
+    Saves confusion matrix file to jpg file.
+    
+
+    Parameters
+    ----------
+    confusion_matrix : TYPE
+        DESCRIPTION.
+    class_names : TYPE
+        DESCRIPTION.
+    title : TYPE
+        DESCRIPTION.
+    modelname : TYPE
+        DESCRIPTION.
+    figsize : TYPE, optional
+        DESCRIPTION. The default is (10, 7).
+    fontsize : TYPE, optional
+        DESCRIPTION. The default is 14.
+
+    Raises
+    ------
+    ValueError
+        DESCRIPTION.
+
+    Returns
+    -------
+    None.
+
+    """
     df_cm = pd.DataFrame(confusion_matrix, index=class_names,
                          columns=class_names, )
     fig, ax = plt.subplots(1, 1, figsize=figsize)
@@ -150,9 +339,32 @@ def print_confusion_matrix(confusion_matrix, class_names, title, modelname,
     t -= 0.5
     plt.ylim(b, t)
     plt.savefig('model/' + modelname + '_' + title + '_confusion_matrix.png')
-    plt.show()
+
+    return
+
 
 def show_results(model, modelname, data, label, title):
+    """
+    
+
+    Parameters
+    ----------
+    model : TYPE
+        DESCRIPTION.
+    modelname : TYPE
+        DESCRIPTION.
+    data : TYPE
+        DESCRIPTION.
+    label : TYPE
+        DESCRIPTION.
+    title : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    None.
+
+    """
     preds = model.predict(data, batch_size=1, verbose=1)
     y_pred = preds.argmax(axis=1)
     if preds.ndim == 1:
@@ -169,8 +381,24 @@ def show_results(model, modelname, data, label, title):
                            unique_labels(y_actual, y_pred), title, modelname)
     
 
-
 def plot_training_results_multitask(history, model_name_path, targets):
+    """
+    
+
+    Parameters
+    ----------
+    history : TYPE
+        DESCRIPTION.
+    model_name_path : TYPE
+        DESCRIPTION.
+    targets : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    None.
+
+    """
     # Plotting the Train Valid Loss Graph
     plt.plot(history.history['loss'])
     plt.plot(history.history['val_loss'])
@@ -179,7 +407,7 @@ def plot_training_results_multitask(history, model_name_path, targets):
     plt.xlabel('epoch')
     plt.legend(['train', 'validation'], loc='upper left')
     plt.savefig(model_name_path + '_loss.png')
-    plt.show()
+
     
     for i in targets:
         # Plotting the Train Valid Loss Graph
@@ -190,7 +418,6 @@ def plot_training_results_multitask(history, model_name_path, targets):
         plt.xlabel('epoch')
         plt.legend(['train', 'validation'], loc='upper left')
         plt.savefig(model_name_path + '_' + i + '_loss.png')
-        plt.show()
 
         # Plotting the Train Valid Accuracy Graph
         
@@ -201,13 +428,35 @@ def plot_training_results_multitask(history, model_name_path, targets):
         plt.xlabel('epoch')
         plt.legend(['train', 'validation'], loc='upper left')
         plt.savefig(model_name_path + '_' + i + '_accuracy.png')
-        plt.show()
 
+        return
 
 
 def show_results_multitask(model, modelname, data, label, title, targets):
+    """
+    
+
+    Parameters
+    ----------
+    model : TYPE
+        DESCRIPTION.
+    modelname : TYPE
+        DESCRIPTION.
+    data : TYPE
+        DESCRIPTION.
+    label : TYPE
+        DESCRIPTION.
+    title : TYPE
+        DESCRIPTION.
+    targets : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    None.
+
+    """
     preds = model.predict(data, batch_size=1, verbose=1)
-    # y_pred = preds.argmax(axis=1)
     y_pred = []
     y_actual = []
     for i in range(len(preds)):
@@ -221,3 +470,4 @@ def show_results_multitask(model, modelname, data, label, title, targets):
         print('\n' + title + '_' + targets[i] + 'Stats\n', classification_report(y_actual[i], y_pred[i]))
         print_confusion_matrix(confusion_matrix(y_actual[i], y_pred[i]),
                                 unique_labels(y_actual[i], y_pred[i]), title + '_' + targets[i], modelname)
+        return
