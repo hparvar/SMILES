@@ -4,10 +4,11 @@ Created on Mon Aug  3 17:24:31 2020
 
 @author: h_par
 """
-
+import tensorflow as tf
 from tensorflow import keras
+import json
 
-from utils import show_results, plot_training_results, load_data, map_moleculs, split_data
+from utils import show_results, plot_training_results, load_data, map_moleculs, split_data, map_single_molecul
 
 
 # parameters --------------------------------------------
@@ -25,6 +26,12 @@ embedding_length = 32
 
 smiles, target = load_data(file_name, targets=targets)
 features, word_map, max_seq_len, vocab, num_words = map_moleculs(smiles)
+# Save mapping info to jason file
+map_info = {}
+map_info['word_map'] = word_map
+map_info['max_seq_len'] = max_seq_len
+with open('model/map_info_' + model_name + '.json', 'w') as f:
+    json.dump(map_info, f)
 # Split data to train, validation and test
 X_train, X_val, X_test, y_train, y_val, y_test = split_data(features, target)
 
@@ -102,8 +109,13 @@ def predict(model, data):
 
 predictions = predict(loaded_model, X_test)
 
+f = open('model/map_info_' + model_name + '.json')
+map_info = json.load(f)
 
-    
+smile = 'Cc1cccc(N2CCN(C(=O)C34CC5CC(CC(C5)C3)C4)CC2)c1C'
+smile = keras.preprocessing.sequence.pad_sequences(map_single_molecul(smile, map_info['word_map']), maxlen= map_info['max_seq_len'])
+prediction = predict(loaded_model, smile)
+print(prediction)    
 show_results(loaded_model, model_name, X_test, y_test, 'Test')
 show_results(loaded_model, model_name, X_val, y_val, 'Validation')
 show_results(loaded_model, model_name, X_train, y_train, 'Train')
