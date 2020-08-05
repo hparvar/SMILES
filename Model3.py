@@ -17,7 +17,7 @@ lr = 0.00001
 optimizer = keras.optimizers.Adam(lr=lr)
 loss = "sparse_categorical_crossentropy"
 batch_size = 32
-epochs = 10
+epochs = 300
 model_name = 'model_3' # ToDo: Check if the model exist
 # -------------------------------------------------------
 
