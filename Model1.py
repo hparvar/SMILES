@@ -7,7 +7,7 @@ Created on Thu Jul 30 17:37:48 2020
 
 from tensorflow import keras
 
-from utils import show_results, plot_training_results, load_data, extract_features, split_data
+from utils import show_results, plot_training_results, load_data, extract_features, split_data, extract_molecul_features
 
 # parameters --------------------------------------------
 targets=['P1'] 
@@ -84,7 +84,9 @@ def predict(model, data):
     y_pred = preds.argmax(axis=1)
     
     return y_pred
-
+smile = 'Cc1cccc(N2CCN(C(=O)C34CC5CC(CC(C5)C3)C4)CC2)c1C'
+prediction = predict(loaded_model, extract_molecul_features(smile))
+print(prediction)
 predictions = predict(loaded_model, X_test)
 
 
